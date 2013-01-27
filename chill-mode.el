@@ -1,112 +1,117 @@
-;;; @@ Copyright
-;;;
-;;; Copyright (C) 1995-2000 August Hoerandl <august.hoerandl@gmx.at>
-;;; Parts Copyright (C) 1995 Eva Bahr-Kitzler
-;;; Parts Copyright (C) 2000 Martin G C Davies <Martin.Davies@alcatel.be>
-;;;
-;;; Keywords: languages
-;;; This file is NOT part of XEmacs.
-;;;
-;;; Most of this program was written and tested during my time 
-;;; at Alcatel Austria
-;;; Alcatel Austria disclaims all copyright interests in the program.
-;;; This software isn't released by Alcatel Austria and 
-;;; Alcatel Austria won't provide any support and/or warranty.
-;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 1, or (at your option)
-;;; any later version.
-;;; 
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;; 
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program; if not, write to the Free Software
-;;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-;;;
-;;; HOWTO:
-;;; This mode should work with xemacs 
-;;;
-;;; Some Functions need a TAGS file - this has to be created with an 
-;;; external program
-;;;
-;;; put this in your .emacs file
-;;; 
-;;; (load "chill-mode")
-;;;
-;;; for font lock 
-;;;  (add-hook 'chill-mode-hook      'turn-on-font-lock)
-;;;
-;;; for function menu
-;;;  (add-hook 'chill-mode-hook      'fume-add-menubar-entry)
-;;;
-;;; todo:
-;;;  1) indent problems:
-;;;    1.1) fix
-;;;      a) strings with ";" 
-;;;          yy := "xxx" //
-;;;                "sdfgh;sdfgh";
-;;;                zz := sdfgh;
-;;;      b) statement 1
-;;;            continue statement 1; statement 2;
-;;;            wrong statement 3;
-;;; 
-;;;      c) first line of buffer and lines starting with <>:
-;;;         okay, but done in a strange way
-;;;    
-;;;    1.2) <> compiler <>  should be a comment 
-;;;         (but there are only two comment styles supported)
-;;;
-;;;    1.3) only one pass indent ( parse-partial-sexp ) 
-;;;
-;;;    1.4) firstline; /* comment with -- */
-;;;         nextline is indented to left margin
-;;;     emacs-bug ? (forward-comment -999) from nextline 
-;;;                      moves to this ^ position on firstline
-;;;
-;;;    1.5) fast support for indent-region
-;;;
-;;;  2) tag
-;;;  2.1) insert size
-;;;      handle set-values - insert mode name
-;;;      needs TAGS-File with mode name after ^a
-;;;
-;;;  2.2) insert size without loading file
-;;;       use only info from TAGS file
-;;;  
-;;;  3) case
-;;;     insert (xx): for all set-values
-;;;
-;;;  4) abbrev/completion
-;;;     6.1) support abbrev as in pascal mode
-;;;     6.2) support completions on local symbols & TAGS file 
-;;;
-;;;  6) func-menu
-;;;     modeline support for nested functions
-;;;
-;;; history:
-;;; 
-;;; Wed Mar 29 1995 - added [^a-z_] before/after types
-;;; Wed Mar 29 1995 - added no \n within strings
-;;; Fri Mar 31 1995 - new keywords
-;;; Wed Jun 14 1995 - ch-insert-seize
-;;; Jul 1995 - a little indent
-;;; nov 1995 - more indent 
-;;; jan 1996 - new read parameter, indent: <>, END ON, comments
-;;; Sun Jun 15 1997 - add support for #preproc
-;;; Mai 2000 - merged code from Martin G C Davies <Martin.Davies@alcatel.be>
-;;;           first public release
+;;; chill-mode.el --- Support for the Chill programming language
+;; Copyright (C) 1995-2012 August Hoerandl <august.hoerandl@gmx.at
+;; Author: August Hoerandl <august.hoerandl@gmx.at
+;;      Parts Copyright (C) 1995 Eva Bahr-Kitzler
+;;      Parts Copyright (C) 2000 Martin G C Davies <Martin.Davies@alcatel.be>
+;; Maintainer: August Hoerandl <august.hoerandl@gmx.at
+;; Created: 1.5.2000
+;; Keywords: languages, chill
+;; Package-Version: 20121212
+;; This file is not part of GNU Emacs.
+;;
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 1, or (at your option)
+;; any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;;
+;; Commentary:
+;;  Most of this program was written and tested during my time
+;;  at Alcatel Austria
+;;  Alcatel Austria disclaims all copyright interests in the program.
+;;  This software isn't released by Alcatel Austria and
+;;  Alcatel Austria won't provide any support and/or warranty.
+;;
+;; HOWTO
+;; This mode should work with xemacs
+;;
+;; Some Functions need a TAGS file - this has to be created with an
+;; external program
+;;
+;; put this in your .emacs file
+;;
+;; (load "chill-mode")
+;;
+;; for font lock
+;;  (add-hook 'chill-mode-hook      'turn-on-font-lock)
+;;
+;; for function menu
+;;  (add-hook 'chill-mode-hook      'fume-add-menubar-entry)
+;;
+;; todo:
+;;  1) indent problems:
+;;    1.1) fix
+;;      a) strings with ";"
+;;          yy := "xxx" //
+;;                "sdfgh;sdfgh";
+;;                zz := sdfgh;
+;;      b) statement 1
+;;            continue statement 1; statement 2;
+;;            wrong statement 3;
+;;
+;;      c) first line of buffer and lines starting with <>:
+;;         okay, but done in a strange way
+;;
+;;    1.2) <> compiler <>  should be a comment
+;;         (but there are only two comment styles supported)
+;;
+;;    1.3) only one pass indent ( parse-partial-sexp )
+;;
+;;    1.4) firstline; /* comment with -- */
+;;         nextline is indented to left margin
+;;     emacs-bug ? (forward-comment -999) from nextline
+;;                      moves to this ^ position on firstline
+;;
+;;    1.5) fast support for indent-region
+;;
+;;  2) tag
+;;  2.1) insert size
+;;      handle set-values - insert mode name
+;;      needs TAGS-File with mode name after ^a
+;;
+;;  2.2) insert size without loading file
+;;       use only info from TAGS file
+;;
+;;  3) case
+;;     insert (xx): for all set-values
+;;
+;;  4) abbrev/completion
+;;     6.1) support abbrev as in pascal mode
+;;     6.2) support completions on local symbols & TAGS file
+;;
+;;  6) func-menu
+;;     modeline support for nested functions
+;;
+;; Change Log:
+;; Wed Mar 29 1995 - added [^a-z_] before/after types
+;; Wed Mar 29 1995 - added no \n within strings
+;; Fri Mar 31 1995 - new keywords
+;; Wed Jun 14 1995 - ch-insert-seize
+;; Jul 1995 - a little indent
+;; nov 1995 - more indent
+;; jan 1996 - new read parameter, indent: <>, END ON, comments
+;; Sun Jun 15 1997 - add support for #preproc
+;; Mai 2000 - merged code from Martin G C Davies <Martin.Davies@alcatel.be>
+;;           first public release
+;;
+;; Code:
+
 ;;;
 ;;; Options
 ;;;
 
-(defvar chill-mode-hook nil  
+(defvar chill-mode-hook nil
   "*List of hook functions run by `chill-mode'.")
 
-(defvar ch-indent 2 
+(defvar ch-indent 2
   "*This variable gives the indentation in CHILL-Mode")
 
 (defvar ch-auto-indent t
@@ -126,15 +131,15 @@ set to nil for NO autoindent")
 
 ;;;
 ;;; chill keywords an types
-;;;  used for font lock mode 
-;;; 
+;;;  used for font lock mode
+;;;
 ; my old version
-;(defvar chill-keywords 
+;(defvar chill-keywords
 ;  '("access" "after" "all" "and" "andif" "array" "assert" "at"
 ;    "begin" "based" "bin" "body" "bools" "buffer" "by" "case" "cause"
 ;    "chars" "context" "continue" "cycle" "dcl" "delay" "do"
 ;    "down" "dynamic" "else" "elsif" "end" "esac" "event" "ever"
-;    "exceptions" "exit" "fi" "for" "forbid" "general" "goto" 
+;    "exceptions" "exit" "fi" "for" "forbid" "general" "goto"
 ;    "grant" "if" "in" "inout" "init" "inline" "inout" "loc" "mod"
 ;    "module" "newmode" "nonref" "nopack" "not" "od" "of" "on"
 ;    "or" "orif" "out" "pack" "pos" "powerset" "prefixed"
@@ -148,7 +153,7 @@ set to nil for NO autoindent")
 ;  "list of all chill keywords")
 
 ;; new version by Martin Davies
-(defvar chill-keywords 
+(defvar chill-keywords
   '(
     "addr" "all" "and" "array" "asm" "assert" "based" "begin"
     "bit_string_literal" "buffer" "by" "call" "case" "cause"
@@ -165,21 +170,21 @@ set to nil for NO autoindent")
 
     "false" "true" "null" "abs" "pred" "size" "subbit" "substr" "succ"
     "num" "length" "sizeof" "instance" "this" "upper" "lower" "extend"
-    "truncate" 
-    ) 
+    "truncate"
+    )
   "list of all chill keywords")
 
 
-(defvar chill-types 
+(defvar chill-types
   '( "byte" "ubyte" "int" "uint" "long" "ulong" "bit"
      "bin" "bit"
      "long_int" "amp_int"
      "bool" "char" "float" "real" "long_real" "instance"
-     "ptr" "long_ptr" 
+     "ptr" "long_ptr"
      "char" "float" "double" "void" "struct"
      "num" "min" "max" "card" "writetext" "readtext" "size" "length"
      "trunc" "round" "pred" "read" "readonly" "readwrite" "writeonly"
-     "addr" 
+     "addr"
      "lower" "upper"
      "true" "false"
      )
@@ -286,7 +291,7 @@ use \".grt\" for gnu-chill")
   (define-key chill-mode-map "\15"  'newline-and-indent)
   (define-key chill-mode-map ";" 'ch-electric-char)
   (define-key chill-mode-map ":" 'ch-electric-char)
-   
+
   (define-key chill-mode-map "\C-cb" 'ch-begin)
   (define-key chill-mode-map "\C-cc" 'ch-case)
   (define-key chill-mode-map "\C-cd" 'ch-definition)
@@ -331,7 +336,7 @@ support: indent (needs add. work)
          tagging
          function menu
          syntax highlighting
-  
+
 Key bindings:
 \\{chill-mode-map}"
   (interactive)
@@ -385,19 +390,19 @@ Key bindings:
 
 (defconst chill-font-lock-keywords (purecopy
   (let ((ident  "\\(\\(\\sw\\|\\s_\\)+\\)") ; indent
-	(decl-1 "\\(proc\\|process\\|module\\)") 
+	(decl-1 "\\(proc\\|process\\|module\\)")
 	(decl-2 "\\(syn\\|synmode\\|newmode\\)") ; or less
  	)
     (list
      (list "\\(<>[^<\n]*<>\\)" 1 'font-lock-comment-face)
-     (list (concat ident "[ \n\t]*:[ \n\t]*" decl-1) 
-	   1 
+     (list (concat ident "[ \n\t]*:[ \n\t]*" decl-1)
+	   1
 	   'font-lock-function-name-face t)
-     (list (concat decl-2 "[ \n\t]+" ident) 
-	   2 
+     (list (concat decl-2 "[ \n\t]+" ident)
+	   2
 	   'font-lock-type-face t)
      (list (concat "\\S_\\<\\(" ; fix me - bad on line start		
-		   (mapconcat 'identity  chill-keywords "\\|") 
+		   (mapconcat 'identity  chill-keywords "\\|")
 		   "\\)\\>\\S_" )
 	   1
 	   'font-lock-keyword-face)
@@ -406,16 +411,16 @@ Key bindings:
 		   "\\)\\>\\S_")
 	   1
 	   'font-lock-type-face)
-     (list (concat "dcl[ \t]+" ident) 
-	   1 font-lock-variable-name-face 
+     (list (concat "dcl[ \t]+" ident)
+	   1 font-lock-variable-name-face
 	   t) ; dcl
      ;; ' is sometimes paired, sometimes not ?
-     (list "[^dbhc]'\\([^'\n]*\\)'" 
-	   1 'font-lock-string-face 
+     (list "[^dbhc]'\\([^'\n]*\\)'"
+	   1 'font-lock-string-face
 	   t) ; normal strings
      ;;(list "\\([dbhc]'[0-9a-f_]*\\)'" 1 'font-lock-string-face t);literals ?
-     '("^[ \t]*\\(#[ \t]*[^ ]*\\)\\([^\n]*\\)"  
-       (1 font-lock-preprocessor-face) 
+     '("^[ \t]*\\(#[ \t]*[^ ]*\\)\\([^\n]*\\)"
+       (1 font-lock-preprocessor-face)
        (2 font-lock-string-face nil t))
      )))
   "Expressions to highlight in Chill buffers.")
@@ -424,7 +429,7 @@ Key bindings:
 (put 'chill-mode 'font-lock-keywords-case-fold-search t)
 
 ;;;
-;;;   chill - function menu 
+;;;   chill - function menu
 ;;;
 (defconst fume-function-name-regexp-chill
    "\\(\\(\\sw\\|\\s_\\)+\\)[ \t\n]*:"
@@ -455,10 +460,10 @@ Key bindings:
 	    (throw 'loop (cons (buffer-substring mb me) mb)))))))
 
 ;;;
-;;; indent  CHILL 
+;;; indent  CHILL
 ;;;
 
-;; move over comment and <> ... <> and #preproc 
+;; move over comment and <> ... <> and #preproc
 ;; would be easier if we had 4 comments in the syntax table ...
 (defun ch-forward-comment ()
 "move forward over comments and <> ... <>"
@@ -483,7 +488,7 @@ Key bindings:
 (defun ch-backward-comment ()
 "move backward over comments and <> ... <>"
 (forward-comment -999)
-;; that was the easy part - now for <> 
+;; that was the easy part - now for <>
 (if (ch-after-directive)
     (while
 	(progn
@@ -535,7 +540,7 @@ Key bindings:
     res))
 
 ;;;
-;;; indent one line 
+;;; indent one line
 ;;;
 (defun ch-indent-line ()
   "Indent one line"
@@ -549,26 +554,26 @@ Key bindings:
 	  (setq eol t))
       (let ((indent-point (point))
 	    (new-indent 0) (last-non-comment 0)
-	    state containing-sexp start-calc 
+	    state containing-sexp start-calc
 	    last-kw  last-is-semi)
-	;; 1.2 move back 
+	;; 1.2 move back
 	;; 1.2.1 <> compiler <>
 	(if (looking-at "<>\\|#")
 	    () ; indent <> to left margin
-	  ;; 1.2.2 move back  
+	  ;; 1.2.2 move back
 	  (ch-backward-comment)
 	  ;; look for concate line
 	  (if (or (= (preceding-char) ?\;)
 		  (= (preceding-char) ?\:))
-	      (progn 
-		(forward-char -1) 
+	      (progn
+		(forward-char -1)
 		(setq last-is-semi t)))
 	  (setq last-non-comment (point))
-	  ;; move back 
+	  ;; move back
 	  (while
 	      (progn
 		(search-backward-regexp ";" nil 0)
-		(forward-char 1) 
+		(forward-char 1)
 		(ch-forward-comment)
 		(beginning-of-line)
 		(skip-chars-forward " \t")
@@ -588,9 +593,9 @@ Key bindings:
 	    (setq containing-sexp (car (cdr state)))))
 	;; 2.3 result of parsing
 	(goto-char indent-point)
-	(cond   
+	(cond
 	 ;; inside string or comment
-	 ((or (nth 3 state) 
+	 ((or (nth 3 state)
 	     (nth 4 state))
 	  ;;(forward-line -1)
 	  ;;(setq new-indent (current-indentation))
@@ -603,15 +608,15 @@ Key bindings:
 			  (setq new-indent (current-column))
 			  (setq last-is-semi t)
 			  ;; align after IN within (...):
-			  (if (and (search-forward-regexp "IN[ \t]+" 
+			  (if (and (search-forward-regexp "IN[ \t]+"
 							  indent-point t)
 				   (save-excursion
 				     (up-list 1)
 				     (looking-at ":")))
 			      (setq new-indent (current-column))))
 	 ;; else: sum up indent
-	 (t (setq new-indent (+ new-indent 
-				(ch-calc-add-indent start-calc 
+	 (t (setq new-indent (+ new-indent
+				(ch-calc-add-indent start-calc
 						    indent-point)))))
 	;; 3. set up indentation
 	(goto-char indent-point)
@@ -623,7 +628,7 @@ Key bindings:
 	      ()
 	    (goto-char start-calc)
 	    ;; align after := or if or with
-	    (if (search-forward-regexp "\\(:=\\|\\<if\\|\\<with\\)[ \t]+" 
+	    (if (search-forward-regexp "\\(:=\\|\\<if\\|\\<with\\)[ \t]+"
 				       indent-point t)
 		(setq new-indent (current-column))
 	      (setq new-indent (+ new-indent ch-indent)))
@@ -633,7 +638,7 @@ Key bindings:
     ;; if we started at the end of a line
     (if eol
 	(end-of-line))))
-  
+
 ;;;
 ;;; auto indent on some keys
 ;;;
@@ -646,27 +651,27 @@ Key bindings:
 
 ;;;
 ;;; some helpful things
-;;; 
+;;;
 (defun ch-buffer-name-no-ext ()
-"Returns the name of the current buffer without extension" 
+"Returns the name of the current buffer without extension"
 (substring (buffer-name)
-	   (string-match "\\(\\sw\\|\\s_\\)*.*" 
+	   (string-match "\\(\\sw\\|\\s_\\)*.*"
 			 (buffer-name))
 	   (match-end 1)))
 
 (defun ch-get-name (prompt)
-  "get one name (using TAGS)" 
+  "get one name (using TAGS)"
  (let ((completion-ignore-case t)
        (def (find-tag-tag prompt)))
-   (if (listp def)  
-       (car def) 
+   (if (listp def)
+       (car def)
      def)))
 
 (defun ch-read-parameter ()
 "Returns nil for no parameter or a list of (name spec type name spec ...)"
 (catch 'loop
   (let ((parms))
-    (while 
+    (while
 	(let ((name (read-string "Paramtername: ")))
 	  (if (string-equal name "")
 	      (throw 'loop parms))
@@ -680,7 +685,7 @@ Key bindings:
 	      (setq parms (list name mode spec)))))))))
 
 (defun ch-insert-parameter (para header fill1 fill2)
-"insert list of parameters PARA (from ch-read-parameter), 
+"insert list of parameters PARA (from ch-read-parameter),
 insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 (if (not para)
     ()
@@ -734,7 +739,7 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
   "Build skeleton MODULE, prompting for the <module name>."
   (interactive)
   (let* ((guess (substring (buffer-name)
-			   (string-match "\\(\\sw\\|\\s_\\)*.*" 
+			   (string-match "\\(\\sw\\|\\s_\\)*.*"
 					 (buffer-name))
 			   (match-end 1) ) )
 	 (name (read-string "Name: " (concat guess "_md") )))
@@ -764,9 +769,9 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 (defun ch-for ()
   "Build skeleton DO FOR loop statement, prompting for the loop parameters."
   (interactive)
-  (let ((name (read-string "Loop Variable: ")) 
-	(from (read-string "From/In: ")) 
-	(to (read-string "To: ")) 
+  (let ((name (read-string "Loop Variable: "))
+	(from (read-string "From/In: "))
+	(to (read-string "To: "))
 	(whilex (read-string "While: "))
 	(start (point)))
     (insert "DO FOR ")
@@ -977,9 +982,9 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 
 (defun ch-get-record ()
   (interactive)
-  (let ((relation (ch-get-name "Relation: ")) 
-	(num (read-string "Nummer: ")) 
-	(buff (read-string "Buffer: ")) 
+  (let ((relation (ch-get-name "Relation: "))
+	(num (read-string "Nummer: "))
+	(buff (read-string "Buffer: "))
 	(sel (read-string "Selector: "))
 	(start (point)))
     (insert "GET_RECORD( " relation ",\n"
@@ -992,9 +997,9 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 
 (defun ch-start-signal-timeout ()
   (interactive)
-  (let ((slot (read-string "Slot: " "sy_lpr_slot")) 
-	(tocl (read-string "Zeitklasse: " "sy_class_")) 
-	(dur (read-string "Dauer: ")) 
+  (let ((slot (read-string "Slot: " "sy_lpr_slot"))
+	(tocl (read-string "Zeitklasse: " "sy_class_"))
+	(dur (read-string "Dauer: "))
 	(sig (ch-get-name "Signal: "))
 	(start (point)))
     (insert "START_SIGNAL_TIMEOUT( " slot ",\n"
@@ -1015,9 +1020,9 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 
 (defun ch-receive-signal ()
   (interactive)
-  (let ((sig (ch-get-name "Signal: ")) 
-	(syn (read-string "Syn: " )) 
-	(var (read-string "Variablen: ")) 
+  (let ((sig (ch-get-name "Signal: "))
+	(syn (read-string "Syn: " ))
+	(var (read-string "Variablen: "))
 	(from (ch-get-name "From: "))
 	(start (point)))
     (insert "/*")
@@ -1074,33 +1079,33 @@ insert: HEADER name FILL1 mode FILL1 spec FILL2 mode ... spec"
 
 (defun ch-insert-seize ()
   "Insert seize statement for TAGNAME (requires valid TAGS table)
-uses ch-grt-file-ext as an extension for the grant file" 
+uses ch-grt-file-ext as an extension for the grant file"
   (interactive)
   (let* ((tagname (ch-get-name "Insert seize for: "))
-	 (seize-text (concat "seize[ \t]*" tagname "[ ,;]")))  
-    (save-window-excursion 
+	 (seize-text (concat "seize[ \t]*" tagname "[ ,;]")))
+    (save-window-excursion
       (save-excursion
 	(message "Looking for '%s' ..." tagname)
-	(widen) 
+	(widen)
 	(goto-char (point-min))
-	(if (search-forward-regexp seize-text nil t ) 
+	(if (search-forward-regexp seize-text nil t )
 	    (message "'%s' already seized" tagname)
 	  ;; not seized yet
-	  (let* ((bn (save-excursion 
+	  (let* ((bn (save-excursion
 		       (find-tag (list tagname))
 		       (ch-buffer-name-no-ext)))
 		 (ust (concat "use_seize_file[ \t]*'" bn )))
-	    (if (search-forward-regexp ust nil t) 
+	    (if (search-forward-regexp ust nil t)
 		(progn
 		  (message "'%s' seized from '%s'" tagname bn)
 		  (forward-line 1)
 		  (insert "    SEIZE " tagname ";\n")
-		  ) 
-	      (progn 
+		  )
+	      (progn
 		(message "'%s' seized from new file '%s'" tagname bn)
-		(search-forward "use_seize_file" nil t) 
+		(search-forward "use_seize_file" nil t)
 		(beginning-of-line)
-		(insert "<> USE_SEIZE_FILE '" bn ch-grt-file-ext "' <>\n" 
+		(insert "<> USE_SEIZE_FILE '" bn ch-grt-file-ext "' <>\n"
 			 "    SEIZE " tagname ";\n\n")))))))))
 
 ;;;
@@ -1264,7 +1269,7 @@ With optional second arg non-nil, STR is the complete name of the instruction."
 	    (setq chill-str (chill-build-PROC-re "[a-zA-Z_]"))
 	  (setq chill-str (chill-build-PROC-re chill-str)))
 	(goto-char (point-min))
-      
+
 	;; Build a list of all possible completions
 	(while (re-search-forward chill-str nil t)
 	  (setq match (buffer-substring (match-beginning 1) (match-end 1)))
@@ -1339,7 +1344,7 @@ With optional second arg non-nil, STR is the complete name of the instruction."
 	    (setq chill-str (chill-build-DCL-re "[a-zA-Z_]"))
 	  (setq chill-str (chill-build-DCL-re chill-str)))
 	(goto-char (point-min))
-      
+
 	;; Build a list of all possible completions
 	(while (re-search-forward chill-str nil t)
 	  (setq match (buffer-substring (match-beginning 2) (match-end 2)))
@@ -1377,7 +1382,7 @@ The default is a name found in the buffer around point."
 	  (beginning-of-line)))
     ))
 
-;;; 
+;;;
 ;;; other useful stuff
 ;;;
 
@@ -1401,7 +1406,7 @@ The default is a name found in the buffer around point."
 (comint-send-input))
 
 ;;;
-;;; set up auto mode list 
+;;; set up auto mode list
 ;;;
 (setq auto-mode-alist (cons '("\\.ch$" . chill-mode) auto-mode-alist))
 (setq auto-mode-alist (cons '("\\.chill$" . chill-mode) auto-mode-alist))
@@ -1410,3 +1415,5 @@ The default is a name found in the buffer around point."
 ;;; finally done
 ;;;
 (provide 'chill-mode)
+
+;;; filename ends here
